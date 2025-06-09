@@ -1,0 +1,64 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Create Release Archive
+        run: |
+          mkdir -p gbn-${GITHUB_REF_NAME}
+          cp gbn LICENSE README.md install.sh gbn-${GITHUB_REF_NAME}/
+          tar czf gbn-${GITHUB_REF_NAME}.tar.gz gbn-${GITHUB_REF_NAME}
+          sha256sum gbn-${GITHUB_REF_NAME}.tar.gz > gbn-${GITHUB_REF_NAME}.tar.gz.sha256
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            gbn-*.tar.gz
+            gbn-*.tar.gz.sha256
+          generate_release_notes: true
+          draft: false
+          prerelease: false
+
+  update-homebrew-formula:
+    needs: release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download release assets
+        run: |
+          curl -sL https://github.com/${{ github.repository }}/archive/refs/tags/${GITHUB_REF_NAME}.tar.gz -o release.tar.gz
+          SHA256=$(sha256sum release.tar.gz | cut -d' ' -f1)
+          echo "SHA256=${SHA256}" >> $GITHUB_ENV
+
+      - name: Update Homebrew Formula
+        run: |
+          sed -i "s/PLACEHOLDER_SHA256/${SHA256}/" Formula/gbn.rb
+          sed -i "s|refs/tags/v[0-9.]*|refs/tags/${GITHUB_REF_NAME}|" Formula/gbn.rb
+
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "Update Homebrew formula for ${GITHUB_REF_NAME}"
+          title: "Update Homebrew formula for ${GITHUB_REF_NAME}"
+          body: |
+            This PR updates the Homebrew formula for the ${GITHUB_REF_NAME} release.
+            
+            SHA256: ${{ env.SHA256 }}
+          branch: update-formula-${GITHUB_REF_NAME}
+          delete-branch: true

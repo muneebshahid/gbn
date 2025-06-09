@@ -1,0 +1,28 @@
+# Maintainer: Muneeb Shahid <muneebshahid5@gmail.com>
+
+pkgname=gbn
+pkgver=1.0.0
+pkgrel=1
+pkgdesc="Interactive Git branch and commit navigator with rich previews"
+arch=('any')
+url="https://github.com/muneebshahid/gbn"
+license=('MIT')
+depends=('git' 'zsh')
+optdepends=('fzf: for rich interactive interface (recommended)'
+            'gum: alternative interactive interface')
+source=("$pkgname-$pkgver.tar.gz::$url/archive/v$pkgver.tar.gz")
+sha256sums=('SKIP')
+
+package() {
+  cd "$pkgname-$pkgver"
+
+  # Install the main script
+  install -Dm755 gbn "$pkgdir/usr/bin/gbn"
+
+  # Install license
+  install -Dm644 LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+
+  # Install documentation
+  install -Dm644 README.md "$pkgdir/usr/share/doc/$pkgname/README.md"
+  install -Dm644 CHANGELOG.md "$pkgdir/usr/share/doc/$pkgname/CHANGELOG.md"
+}

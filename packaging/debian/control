@@ -1,0 +1,25 @@
+Source: gbn
+Section: utils
+Priority: optional
+Maintainer: Muneeb Shahid <muneebshahid5@gmail.com>
+Build-Depends: debhelper-compat (= 13)
+Standards-Version: 4.6.0
+Homepage: https://github.com/muneebshahid/gbn
+Rules-Requires-Root: no
+
+Package: gbn
+Architecture: all
+Depends: ${misc:Depends}, git, zsh
+Recommends: fzf
+Suggests: gum
+Description: Interactive Git branch and commit navigator
+ gbn (Git Branch Navigator) is a powerful interactive tool for switching
+ between Git branches and commits with rich previews. It provides an
+ intuitive interface using fzf, gum, or a pure shell fallback.
+ .
+ Features include:
+  - Interactive branch switching with real-time preview
+  - Commit navigation with history browsing
+  - Branch status indicators
+  - Rich previews with diffs and file changes
+  - Multiple interface options

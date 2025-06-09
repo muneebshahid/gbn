@@ -1,0 +1,40 @@
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Editor directories and files
+.idea
+.vscode
+*.swp
+*.swo
+*~
+
+# Logs
+*.log
+
+# Temporary files
+*.tmp
+*.temp
+.tmp/
+
+# Build artifacts
+dist/
+build/
+
+# Testing
+coverage/
+.coverage
+
+# Node (if ever needed for tooling)
+node_modules/
+
+# Python (if ever needed for tooling)
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+
+# Local environment
+.env
+.env.local
