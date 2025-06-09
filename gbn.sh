@@ -1,0 +1,387 @@
+#!/usr/bin/env zsh
+# gbn.sh — pick a branch or commit with fzf ▸ gum ▸ pure-zsh
+set -euo pipefail
+unsetopt KSH_ARRAYS                         # keep 1-based arrays
+
+##############################################################################
+# 0. Parse CLI options
+##############################################################################
+log_lines=15          # default: 15 commits in preview
+preview_width=50      # default: 50 % of screen
+include_remote=false
+commit_count=50       # default: show last 50 commits
+
+usage() {
+  cat <<EOF
+Usage: ${0:t} [OPTIONS]
+
+Options
+  -n, --log-lines N       how many commits to show in fzf preview   (default 15)
+  -w, --preview-width N   preview pane width in percent             (default 40)
+  -r, --remote            include remote branches as well as local
+  -l, --limit N           number of commits to show                  (default 50)
+  -h, --help              show this help and exit
+
+Status Indicators:
+  ✓        branch is synced with upstream
+  ↑N       branch is N commits ahead of upstream
+  ↓N       branch is N commits behind upstream
+  ↑N ↓M    branch has diverged (N ahead, M behind)
+  ○        branch has no upstream tracking
+EOF
+}
+
+while (( $# )); do
+  case $1 in
+    -n|--log-lines)     log_lines=$2; shift 2 ;;
+    -w|--preview-width) preview_width=$2; shift 2 ;;
+    -r|--remote)        include_remote=true; shift ;;
+    -l|--limit)         commit_count=$2; shift 2 ;;
+    -h|--help)          usage; exit 0 ;;
+    *)                  print -u2 "Unknown option: $1"; usage; exit 1 ;;
+  esac
+done
+
+##############################################################################
+# 1. Gather branches
+##############################################################################
+die() { print -u2 -P "%F{red}${0:t}: $*%f"; exit 1; }
+
+git rev-parse --git-dir >/dev/null 2>&1 || die "not inside a Git repository"
+
+ref_paths=(refs/heads/)                       # always local
+if $include_remote; then
+  ref_paths+=(refs/remotes/)                  # add remotes, too
+fi
+
+branches=(${(f)"$(git for-each-ref --sort=-committerdate \
+                             --format='%(refname:short)' $=ref_paths)"})
+# Optionally strip the symbolic remote HEAD ref:
+branches=(${branches:#*/HEAD})
+
+# Filter out empty branch names
+branches=(${branches:#})
+
+(( ${#branches} )) || die "no branches found"
+
+current=$(git symbolic-ref --quiet --short HEAD 2>/dev/null || :)
+
+##############################################################################
+# 1.5. Get branch status information
+##############################################################################
+typeset -A branch_status
+get_branch_status() {
+  local branch=$1
+  local upstream=$(git rev-parse --abbrev-ref "$branch@{upstream}" 2>/dev/null)
+
+  if [[ -z $upstream ]]; then
+    echo "no-upstream"
+    return
+  fi
+
+  local ahead behind
+  local counts=$(git rev-list --count --left-right "$upstream...$branch" 2>/dev/null)
+  if [[ -n $counts ]]; then
+    ahead=${counts%	*}
+    behind=${counts#*	}
+
+    if [[ $ahead -eq 0 && $behind -eq 0 ]]; then
+      echo "synced"
+    elif [[ $ahead -gt 0 && $behind -eq 0 ]]; then
+      echo "ahead:$ahead"
+    elif [[ $ahead -eq 0 && $behind -gt 0 ]]; then
+      echo "behind:$behind"
+    else
+      echo "diverged:$ahead:$behind"
+    fi
+  else
+    echo "unknown"
+  fi
+}
+
+# Pre-fetch status for local branches (only if not too many)
+if [[ ${#branches} -le 50 ]]; then
+  for b in $branches; do
+    if [[ ! $b =~ ^origin/ ]]; then
+      branch_status[$b]=$(get_branch_status "$b")
+    fi
+  done
+fi
+
+##############################################################################
+# 2. Try FZF (richest)
+##############################################################################
+if command -v fzf >/dev/null 2>&1; then
+  # Format branches with status indicators
+  format_branch_with_status() {
+    local branch=$1
+    local display="$branch"
+
+    # Add current branch indicator
+    if [[ $branch == $current ]]; then
+      display="* $display"
+    else
+      display="  $display"
+    fi
+
+    # Add status indicator for local branches
+    if [[ ! $branch =~ ^origin/ ]] && [[ -n ${branch_status[$branch]} ]]; then
+      local branch_stat=${branch_status[$branch]}
+      case $branch_stat in
+        synced)
+          display="$display \033[32m✓\033[0m"
+          ;;
+        ahead:*)
+          local count=${branch_stat#ahead:}
+          display="$display \033[33m↑$count\033[0m"
+          ;;
+        behind:*)
+          local count=${branch_stat#behind:}
+          display="$display \033[31m↓$count\033[0m"
+          ;;
+        diverged:*)
+          local counts=${branch_stat#diverged:}
+          local ahead=${counts%:*}
+          local behind=${counts#*:}
+          display="$display \033[35m↑$ahead ↓$behind\033[0m"
+          ;;
+        no-upstream)
+          display="$display \033[90m○\033[0m"
+          ;;
+      esac
+    fi
+
+    echo -e "$display"
+  }
+
+  # Create enhanced preview command
+  preview_cmd='
+    # Extract just the hash/branch name (first word after status indicator)
+    item=$(echo {} | sed "s/^[* ] *//" | awk "{print \$1}")
+
+    # Skip separator lines
+    if [[ $item =~ "────────" ]]; then
+      exit 0
+    fi
+
+    # Detect if its a commit hash (7-40 hex chars)
+    if [[ $item =~ ^[0-9a-f]{7,40}$ ]]; then
+      # Its a commit
+      echo -e "\033[1;36mCommit:\033[0m $item"
+
+      # Show full commit info
+      commit_info=$(git show --no-patch --format="%C(yellow)%H%Creset%n%C(blue)Author:%Creset %an <%ae>%n%C(blue)Date:%Creset   %ad (%ar)%n%n    %s%n%n    %b" "$item" 2>/dev/null)
+      echo "$commit_info"
+
+      # Show branches containing this commit
+      echo -e "\n\033[1;36mBranches containing this commit:\033[0m"
+      git branch -a --contains "$item" 2>/dev/null | head -10
+
+      # Show file stats
+      echo -e "\n\033[1;36mFiles changed:\033[0m"
+      git show --stat --format="" "$item" 2>/dev/null
+
+      echo -e "\n\033[1;36mDiff preview:\033[0m"
+      git show --color=always "$item" 2>/dev/null | head -50
+    else
+      # Its a branch
+      echo -e "\033[1;36mBranch:\033[0m $item"
+
+      # Show status for local branches
+      if [[ ! $item =~ ^origin/ ]]; then
+        upstream=$(git rev-parse --abbrev-ref "$item@{upstream}" 2>/dev/null)
+        if [[ -n $upstream ]]; then
+          counts=$(git rev-list --count --left-right "$upstream...$item" 2>/dev/null)
+          if [[ -n $counts ]]; then
+            ahead=${counts%	*}
+            behind=${counts#*	}
+
+            if [[ $ahead -eq 0 && $behind -eq 0 ]]; then
+              echo -e "\033[1;32mStatus:\033[0m ✓ synced with $upstream"
+            elif [[ $ahead -gt 0 && $behind -eq 0 ]]; then
+              echo -e "\033[1;33mStatus:\033[0m ↑$ahead ahead of $upstream"
+            elif [[ $ahead -eq 0 && $behind -gt 0 ]]; then
+              echo -e "\033[1;31mStatus:\033[0m ↓$behind behind $upstream"
+            else
+              echo -e "\033[1;35mStatus:\033[0m ↑$ahead ↓$behind (diverged from $upstream)"
+            fi
+          fi
+        else
+          echo -e "\033[1;90mStatus:\033[0m no upstream tracking"
+        fi
+      fi
+
+      # Get last commit info
+      last_commit=$(git log -1 --pretty=format:"%ar by %an" "$item" 2>/dev/null)
+      if [[ -n $last_commit ]]; then
+        echo -e "\033[1;36mLast update:\033[0m $last_commit"
+      fi
+
+      # Get file statistics compared to merge-base with main/master
+      main_branch=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed "s@^refs/remotes/origin/@@")
+      if [[ -z $main_branch ]]; then
+        # Fallback to common branch names
+        for mb in main master; do
+          if git rev-parse --verify --quiet "origin/$mb" >/dev/null; then
+            main_branch=$mb
+            break
+          fi
+        done
+      fi
+
+      if [[ -n $main_branch ]] && [[ $item != $main_branch ]]; then
+        merge_base=$(git merge-base "origin/$main_branch" "$item" 2>/dev/null)
+        if [[ -n $merge_base ]]; then
+          file_stats=$(git diff --shortstat "$merge_base..$item" 2>/dev/null)
+          if [[ -n $file_stats ]]; then
+            echo -e "\033[1;36mFiles:\033[0m $file_stats"
+          fi
+        fi
+      fi
+
+      echo ""
+      echo -e "\033[1;36mRecent commits:\033[0m"
+      git log --color=always --oneline -n '${log_lines}' "$item"
+    fi
+  '
+
+  # Build the item list (branches and commits)
+  item_list=""
+
+  # Add branches
+  for b in $branches; do
+    # Skip empty branches
+    if [[ -n $b ]]; then
+      item_list+=$(format_branch_with_status "$b")
+      item_list+=$'\n'
+    fi
+  done
+
+  # Add separator between branches and commits
+  if [[ -n $item_list ]]; then
+    item_list+="  \033[90m──────── Recent Commits ────────\033[0m"
+    item_list+=$'\n'
+  fi
+
+  # Get recent commits with author
+  commits=$(git log --no-decorate -n $commit_count --pretty=format:'%h|%s|%an|%ar' 2>/dev/null)
+  if [[ -n $commits ]]; then
+    while IFS='|' read -r hash msg author when; do
+      # Truncate message if too long
+      if [[ ${#msg} -gt 50 ]]; then
+        msg="${msg:0:47}..."
+      fi
+      # Format: hash message (author, time ago)
+      item_list+="  \033[33m$hash\033[0m $msg \033[90m($author, $when)\033[0m"
+      item_list+=$'\n'
+    done <<< "$commits"
+  fi
+
+  # Set prompt
+  prompt="branch/commit"
+
+  # Remove trailing newline to prevent empty last item
+  item_list=${item_list%$'\n'}
+
+  sel=$(echo -e "$item_list" | \
+        fzf --ansi --prompt="$prompt> " --border \
+          --layout=reverse --height=60% \
+          --preview="$preview_cmd" \
+          --preview-window=right:${preview_width}%:wrap | sed 's/^[* ] *//' | awk '{print $1}')
+  [[ -z $sel ]] && { print "Aborted – no branch/commit switched."; exit 0 }
+
+  # Remove the separator line if selected
+  if [[ $sel =~ "────────" ]]; then
+    print "Invalid selection"
+    exit 1
+  fi
+
+  exec git checkout "$sel"
+fi
+
+##############################################################################
+# 3. Try GUM filter
+##############################################################################
+if command -v gum >/dev/null 2>&1; then
+  sel=$(printf '%s\n' $branches | \
+        gum filter --placeholder "Type to filter branches…" \
+                   --prompt "branch> ")
+  [[ -z $sel ]] && { print "Aborted – no branch switched."; exit 0 }
+  exec git checkout "$sel"
+fi
+
+##############################################################################
+# 4. Pure-zsh fallback
+##############################################################################
+integer idx=1 N=${#branches}
+orig_stty=$(stty -g)
+cleanup() { printf '\033[?25h'; stty "$orig_stty"; }
+trap cleanup EXIT INT TERM
+
+draw() {
+  printf '\033[H\033[J'
+  print -Pn '%F{cyan}Pick a branch (↑/↓, Enter) — q to quit%f\n\n'
+  for i in {1..$N}; do
+    [[ $i -eq $idx ]] && printf '> ' || printf '  '
+    b=${branches[i]}
+
+    # Build display string
+    local display="$b"
+
+    # Add status indicator for local branches
+    if [[ ! $b =~ ^origin/ ]] && [[ -n ${branch_status[$b]} ]]; then
+      local branch_stat=${branch_status[$b]}
+      case $branch_stat in
+        synced)
+          display="$display %F{green}✓%f"
+          ;;
+        ahead:*)
+          local count=${branch_stat#ahead:}
+          display="$display %F{yellow}↑$count%f"
+          ;;
+        behind:*)
+          local count=${branch_stat#behind:}
+          display="$display %F{red}↓$count%f"
+          ;;
+        diverged:*)
+          local counts=${branch_stat#diverged:}
+          local ahead=${counts%:*}
+          local behind=${counts#*:}
+          display="$display %F{magenta}↑$ahead ↓$behind%f"
+          ;;
+        no-upstream)
+          display="$display %F{8}○%f"
+          ;;
+      esac
+    fi
+
+    # Color current branch
+    if [[ $b == $current ]]; then
+      print -Pn '%F{green}%s%f\n' "$display"
+    else
+      print -Pn "$display\n"
+    fi
+  done
+}
+
+printf '\033[?25l'; stty -echo -icanon time 0 min 1
+draw
+while true; do
+  read -rsk1 key
+  case $key in
+    $'\n') sel=${branches[idx]} ; break ;;
+    q)     sel=""; break ;;
+    $'\e') read -rsk1 k2 || continue
+           [[ $k2 == "[" ]] || continue
+           read -rsk1 k3 || continue
+           case $k3 in
+             A) (( idx = idx==1 ? N : idx-1 )) ;;  # ↑
+             B) (( idx = idx==N ? 1 : idx+1 )) ;;  # ↓
+           esac
+           draw ;;
+  esac
+done
+
+[[ -z $sel ]] && { print "Aborted – no branch switched."; exit 0 }
+print -P "%F{yellow}→ checking out '%f%F{bold}$sel%f%F{yellow}' …%f"
+exec git checkout "$sel"
