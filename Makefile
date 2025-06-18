@@ -48,11 +48,3 @@ test:
 	@bash -c 'if ! command -v git >/dev/null; then echo "ERROR: git is required"; exit 1; fi'
 	@./gbn --help >/dev/null && echo "✓ Help command works"
 	@echo "Basic tests passed!"
-
-.PHONY: clean
-clean:
-	@rm -rf packaging/*/build
-	@rm -rf packaging/*/pkg
-	@rm -rf packaging/*/src
-	@rm -f packaging/*/*.tar.gz
-	@echo "Cleaned temporary files"

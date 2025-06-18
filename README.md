@@ -36,49 +36,14 @@ curl -sSL https://raw.githubusercontent.com/muneebshahid/gbn/main/install.sh | s
 curl -sSL https://raw.githubusercontent.com/muneebshahid/gbn/main/install.sh | PREFIX=$HOME/.local bash
 ```
 
-### Package Managers
-
-#### Homebrew (macOS/Linux)
+### Homebrew (macOS/Linux)
 
 ```bash
 brew tap muneebshahid/gbn
 brew install gbn
 ```
 
-#### Arch Linux (AUR)
-
-```bash
-# Using yay
-yay -S gbn
-
-# Using paru
-paru -S gbn
-
-# Manual from AUR
-git clone https://aur.archlinux.org/gbn.git
-cd gbn
-makepkg -si
-```
-
-#### Ubuntu/Debian (via PPA)
-
-```bash
-# Add PPA repository
-sudo add-apt-repository ppa:muneebshahid/gbn
-sudo apt update
-sudo apt install gbn
-```
-
-#### Fedora/RHEL (via COPR)
-
-```bash
-sudo dnf copr enable muneebshahid/gbn
-sudo dnf install gbn
-```
-
-### Manual Installation
-
-#### From Release
+### From Release
 
 ```bash
 # Download latest release
@@ -92,7 +57,7 @@ cd gbn-v1.0.0
 sudo ./install.sh
 ```
 
-#### From Source
+### From Source
 
 ```bash
 # Clone the repository
@@ -181,7 +146,7 @@ sudo apt install fzf
 
 # Arch
 sudo pacman -S fzf
-# Install gum from AUR
+# For gum, see: https://github.com/charmbracelet/gum#installation
 ```
 
 ## How It Works
@@ -202,16 +167,6 @@ sudo pacman -S fzf
 ## Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request. See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
-
-### Packaging
-
-The `packaging/` directory contains files for building distribution packages:
-- `aur/` - Arch Linux AUR package files
-- `debian/` - Debian/Ubuntu package files
-- `rpm/` - Fedora/RHEL RPM spec file
-- `build-packages.sh` - Helper script to build packages
-
-To build packages, use: `./packaging/build-packages.sh [aur|deb|rpm|all]`
 
 ## License
 
