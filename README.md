@@ -2,7 +2,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-An interactive Git branch and commit switcher with rich previews. Navigate your Git history with ease using `fzf`.
+A minimal and interactive Git branch and commit switcher with rich previews and fuzzy search. Navigate your Git history with ease using `fzf`.
 
 ![gbn demo](https://github.com/user-attachments/assets/gbn-demo.gif)
 
