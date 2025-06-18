@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - Initial release of gbn (Git Branch Navigator)
-- Interactive branch switching with fzf, gum, or pure shell fallback
+- Interactive branch switching with fzf
 - Rich previews showing commit history, file changes, and diffs
 - Branch status indicators (synced, ahead, behind, diverged, no upstream)
 - Support for browsing and checking out recent commits
@@ -22,7 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - MIT License for open source distribution
 
 ### Features
-- Automatically detects and uses the best available interface (fzf > gum > pure shell)
+- Optimized for fast navigation using fzf
 - Performance optimized for large repositories
 - Color-coded output for better visibility
 - Comprehensive help documentation

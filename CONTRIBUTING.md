@@ -24,7 +24,7 @@ Thank you for your interest in contributing to gbn! We welcome contributions fro
 ### Development Guidelines
 
 - Maintain compatibility with zsh
-- Ensure the script works without fzf/gum (pure shell fallback)
+- Ensure fzf is properly utilized for all interactive features
 - Test with both local and remote branches
 - Follow the existing code style
 - Add comments for complex logic
@@ -34,12 +34,10 @@ Thank you for your interest in contributing to gbn! We welcome contributions fro
 
 Before submitting a PR, please test:
 
-1. Basic functionality without fzf/gum
-2. Full functionality with fzf
-3. Functionality with gum (if available)
-4. Remote branch handling (`-r` flag)
-5. All command-line options
-6. Performance with repositories of various sizes
+1. Full functionality with fzf
+2. Remote branch handling (`-r` flag)
+3. All command-line options
+4. Performance with repositories of various sizes
 
 ### Code Style
 

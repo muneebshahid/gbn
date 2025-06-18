@@ -1,5 +1,5 @@
 #!/usr/bin/env zsh
-# gbn.sh — pick a branch or commit with fzf ▸ gum ▸ pure-zsh
+# gbn.sh — pick a branch or commit with fzf
 set -euo pipefail
 unsetopt KSH_ARRAYS                         # keep 1-based arrays
 
@@ -300,88 +300,6 @@ if command -v fzf >/dev/null 2>&1; then
 fi
 
 ##############################################################################
-# 3. Try GUM filter
+# 3. No fzf found
 ##############################################################################
-if command -v gum >/dev/null 2>&1; then
-  sel=$(printf '%s\n' $branches | \
-        gum filter --placeholder "Type to filter branches…" \
-                   --prompt "branch> ")
-  [[ -z $sel ]] && { print "Aborted – no branch switched."; exit 0 }
-  exec git checkout "$sel"
-fi
-
-##############################################################################
-# 4. Pure-zsh fallback
-##############################################################################
-integer idx=1 N=${#branches}
-orig_stty=$(stty -g)
-cleanup() { printf '\033[?25h'; stty "$orig_stty"; }
-trap cleanup EXIT INT TERM
-
-draw() {
-  printf '\033[H\033[J'
-  print -Pn '%F{cyan}Pick a branch (↑/↓, Enter) — q to quit%f\n\n'
-  for i in {1..$N}; do
-    [[ $i -eq $idx ]] && printf '> ' || printf '  '
-    b=${branches[i]}
-
-    # Build display string
-    local display="$b"
-
-    # Add status indicator for local branches
-    if [[ ! $b =~ ^origin/ ]] && [[ -n ${branch_status[$b]} ]]; then
-      local branch_stat=${branch_status[$b]}
-      case $branch_stat in
-        synced)
-          display="$display %F{green}✓%f"
-          ;;
-        ahead:*)
-          local count=${branch_stat#ahead:}
-          display="$display %F{yellow}↑$count%f"
-          ;;
-        behind:*)
-          local count=${branch_stat#behind:}
-          display="$display %F{red}↓$count%f"
-          ;;
-        diverged:*)
-          local counts=${branch_stat#diverged:}
-          local ahead=${counts%:*}
-          local behind=${counts#*:}
-          display="$display %F{magenta}↑$ahead ↓$behind%f"
-          ;;
-        no-upstream)
-          display="$display %F{8}○%f"
-          ;;
-      esac
-    fi
-
-    # Color current branch
-    if [[ $b == $current ]]; then
-      print -Pn '%F{green}%s%f\n' "$display"
-    else
-      print -Pn "$display\n"
-    fi
-  done
-}
-
-printf '\033[?25l'; stty -echo -icanon time 0 min 1
-draw
-while true; do
-  read -rsk1 key
-  case $key in
-    $'\n') sel=${branches[idx]} ; break ;;
-    q)     sel=""; break ;;
-    $'\e') read -rsk1 k2 || continue
-           [[ $k2 == "[" ]] || continue
-           read -rsk1 k3 || continue
-           case $k3 in
-             A) (( idx = idx==1 ? N : idx-1 )) ;;  # ↑
-             B) (( idx = idx==N ? 1 : idx+1 )) ;;  # ↓
-           esac
-           draw ;;
-  esac
-done
-
-[[ -z $sel ]] && { print "Aborted – no branch switched."; exit 0 }
-print -P "%F{yellow}→ checking out '%f%F{bold}$sel%f%F{yellow}' …%f"
-exec git checkout "$sel"
+die "fzf is required but not found. Please install fzf to use gbn."

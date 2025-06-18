@@ -89,21 +89,15 @@ if [[ ":$PATH:" != *":$BIN_DIR:"* ]]; then
     echo ""
 fi
 
-# Check for optional dependencies
+# Check for required dependencies
 info "Checking dependencies..."
-if command -v fzf >/dev/null 2>&1; then
-    info "✓ fzf is installed (recommended)"
-else
-    warning "fzf is not installed. Install it for the best experience:"
+if ! command -v fzf >/dev/null 2>&1; then
+    error "fzf is required but not installed. Please install it:"
     echo "  macOS:  brew install fzf"
     echo "  Linux:  Check your package manager or https://github.com/junegunn/fzf#installation"
+    exit 1
 fi
-
-if command -v gum >/dev/null 2>&1; then
-    info "✓ gum is installed (optional)"
-else
-    info "gum is not installed (optional). The script will work without it."
-fi
+info "✓ fzf is installed"
 
 echo ""
 info "Installation complete! 🎉"

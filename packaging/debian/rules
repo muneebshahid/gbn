@@ -1,9 +1,0 @@
-#!/usr/bin/make -f
-
-%:
-	dh $@
-
-override_dh_auto_install:
-	install -Dm755 gbn debian/gbn/usr/bin/gbn
-	install -Dm644 README.md debian/gbn/usr/share/doc/gbn/README.md
-	install -Dm644 CHANGELOG.md debian/gbn/usr/share/doc/gbn/CHANGELOG.md

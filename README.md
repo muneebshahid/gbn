@@ -2,7 +2,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-A powerful interactive Git branch and commit switcher with rich previews. Navigate your Git history with ease using `fzf`, `gum`, or a pure shell interface.
+An interactive Git branch and commit switcher with rich previews. Navigate your Git history with ease using `fzf`.
 
 ![gbn demo](https://github.com/user-attachments/assets/gbn-demo.gif)
 
@@ -12,8 +12,7 @@ A powerful interactive Git branch and commit switcher with rich previews. Naviga
 - **Commit navigation** - browse and checkout recent commits
 - **Branch status indicators** showing sync status with upstream
 - **Rich previews** including commit history, file changes, and diffs
-- **Multiple interfaces**: Uses `fzf` for the best experience, falls back to `gum` or pure shell
-- **Performance optimized** for large repositories
+- **Fuzzy search** for branches, commits and authors
 - **Remote branch support** with `-r/--remote` flag
 
 ### Status Indicators
@@ -127,42 +126,19 @@ gbn -r -n 30 -w 70
 
 - **Git** (required)
 - **Zsh** (required - script uses zsh-specific features)
-- **fzf** (recommended) - provides the richest interface with previews
-- **gum** (optional) - fallback option with filtering
-- Works without fzf/gum using pure shell interface
+- **fzf** (required) - provides interactive interface with previews
 
 ### Installing Dependencies
 
 ```bash
-# macOS
-brew install fzf gum
-
-# Linux (with Homebrew)
-brew install fzf gum
-
-# Ubuntu/Debian
-sudo apt install fzf
-# For gum, see: https://github.com/charmbracelet/gum#installation
-
-# Arch
-sudo pacman -S fzf
-# For gum, see: https://github.com/charmbracelet/gum#installation
+brew install fzf
 ```
 
 ## How It Works
 
-1. **With fzf** (best experience):
-   - Full preview of branches/commits with syntax highlighting
-   - Shows commit history, file changes, and diffs
-   - Real-time filtering and navigation
-
-2. **With gum** (good experience):
-   - Clean filtering interface
-   - Simple branch selection
-
-3. **Pure shell** (always works):
-   - Arrow key navigation
-   - Works in minimal environments
+- Full preview of branches/commits with syntax highlighting
+- Shows commit history, file changes, and diffs
+- Real-time filtering and navigation
 
 ## Contributing
 
@@ -179,4 +155,4 @@ Created by [Muneeb Shahid](https://github.com/muneebshahid)
 ## Acknowledgments
 
 - Inspired by various Git workflow tools
-- Built with [fzf](https://github.com/junegunn/fzf) and [gum](https://github.com/charmbracelet/gum)
+- Built with [fzf](https://github.com/junegunn/fzf)
