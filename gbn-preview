@@ -1,0 +1,90 @@
+#!/usr/bin/env zsh
+# Preview script for gbn
+
+# Extract just the hash/branch name (first word after status indicator)
+item=$(echo $1 | sed "s/^[* ] *//" | awk "{print \$1}")
+
+# Skip separator lines
+if [[ $item =~ "────────" ]]; then
+  exit 0
+fi
+
+# Detect if its a commit hash (7-40 hex chars)
+if [[ $item =~ ^[0-9a-f]{7,40}$ ]]; then
+  # Its a commit
+  echo -e "\033[1;36mCommit:\033[0m $item"
+
+  # Show full commit info
+  commit_info=$(git show --no-patch --format="%C(yellow)%H%Creset%n%C(blue)Author:%Creset %an <%ae>%n%C(blue)Date:%Creset   %ad (%ar)%n%n    %s%n%n    %b" "$item" 2>/dev/null)
+  echo "$commit_info"
+
+  # Show branches containing this commit
+  echo -e "\n\033[1;36mBranches containing this commit:\033[0m"
+  git branch -a --contains "$item" 2>/dev/null | head -10
+
+  # Show file stats
+  echo -e "\n\033[1;36mFiles changed:\033[0m"
+  git show --stat --format="" "$item" 2>/dev/null
+
+  echo -e "\n\033[1;36mDiff preview:\033[0m"
+  git show --color=always "$item" 2>/dev/null | head -50
+else
+  # Its a branch
+  echo -e "\033[1;36mBranch:\033[0m $item"
+
+  # Show status for local branches
+  if [[ ! $item =~ ^origin/ ]]; then
+    upstream=$(git rev-parse --abbrev-ref "$item@{upstream}" 2>/dev/null)
+    if [[ -n $upstream ]]; then
+      counts=$(git rev-list --count --left-right "$upstream...$item" 2>/dev/null)
+      if [[ -n $counts ]]; then
+        ahead=${counts%	*}
+        behind=${counts#*	}
+
+        if [[ $ahead -eq 0 && $behind -eq 0 ]]; then
+          echo -e "\033[1;32mStatus:\033[0m ✓ synced with $upstream"
+        elif [[ $ahead -gt 0 && $behind -eq 0 ]]; then
+          echo -e "\033[1;33mStatus:\033[0m ↑$ahead ahead of $upstream"
+        elif [[ $ahead -eq 0 && $behind -gt 0 ]]; then
+          echo -e "\033[1;31mStatus:\033[0m ↓$behind behind $upstream"
+        else
+          echo -e "\033[1;35mStatus:\033[0m ↑$ahead ↓$behind (diverged from $upstream)"
+        fi
+      fi
+    else
+      echo -e "\033[1;90mStatus:\033[0m no upstream tracking"
+    fi
+  fi
+
+  # Get last commit info
+  last_commit=$(git log -1 --pretty=format:"%ar by %an" "$item" 2>/dev/null)
+  if [[ -n $last_commit ]]; then
+    echo -e "\033[1;36mLast update:\033[0m $last_commit"
+  fi
+
+  # Get file statistics compared to merge-base with main/master
+  main_branch=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed "s@^refs/remotes/origin/@@")
+  if [[ -z $main_branch ]]; then
+    # Fallback to common branch names
+    for mb in main master; do
+      if git rev-parse --verify --quiet "origin/$mb" >/dev/null; then
+        main_branch=$mb
+        break
+      fi
+    done
+  fi
+
+  if [[ -n $main_branch ]] && [[ $item != $main_branch ]]; then
+    merge_base=$(git merge-base "origin/$main_branch" "$item" 2>/dev/null)
+    if [[ -n $merge_base ]]; then
+      file_stats=$(git diff --shortstat "$merge_base..$item" 2>/dev/null)
+      if [[ -n $file_stats ]]; then
+        echo -e "\033[1;36mFiles:\033[0m $file_stats"
+      fi
+    fi
+  fi
+
+  echo ""
+  echo -e "\033[1;36mRecent commits:\033[0m"
+  git log --color=always --oneline -n ${2:-15} "$item"
+fi
