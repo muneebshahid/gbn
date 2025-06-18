@@ -148,9 +148,6 @@ Contributions are welcome! Please feel free to submit a Pull Request. See [CONTR
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## Author
-
-Created by [Muneeb Shahid](https://github.com/muneebshahid)
 
 ## Acknowledgments
 
