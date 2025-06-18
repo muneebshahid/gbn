@@ -67,7 +67,7 @@ branches=(${branches:#})
 current=$(git symbolic-ref --quiet --short HEAD 2>/dev/null || :)
 
 ##############################################################################
-# 1.5. Get branch status information
+# 2. Get branch status information
 ##############################################################################
 typeset -A branch_status
 get_branch_status() {
@@ -109,7 +109,7 @@ if [[ ${#branches} -le 50 ]]; then
 fi
 
 ##############################################################################
-# 2. Try FZF (richest)
+# 3. FZF
 ##############################################################################
 if command -v fzf >/dev/null 2>&1; then
   # Format branches with status indicators
@@ -157,12 +157,12 @@ if command -v fzf >/dev/null 2>&1; then
   # Get the directory where gbn is installed
   script_dir="${0:A:h}"
   preview_script="$script_dir/gbn-preview"
-  
+
   # Check if preview script exists
   if [[ ! -f $preview_script ]]; then
     die "Preview script not found at: $preview_script"
   fi
-  
+
   # Create preview command using external script
   preview_cmd="$preview_script {} $log_lines"
 
@@ -221,6 +221,6 @@ if command -v fzf >/dev/null 2>&1; then
 fi
 
 ##############################################################################
-# 3. No fzf found
+# 4. No fzf found
 ##############################################################################
 die "fzf is required but not found. Please install fzf to use gbn."
