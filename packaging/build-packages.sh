@@ -39,48 +39,48 @@ build_aur() {
 build_deb() {
     echo "Building Debian package..."
     cd "$PROJECT_ROOT"
-    
+
     # Create temporary build directory
     BUILD_DIR=$(mktemp -d)
     trap "rm -rf $BUILD_DIR" EXIT
-    
+
     # Copy files
     cp -r . "$BUILD_DIR/gbn-$VERSION"
     cd "$BUILD_DIR/gbn-$VERSION"
-    
+
     # Copy debian directory
     cp -r "$SCRIPT_DIR/debian" debian
-    
+
     # Build package
     dpkg-buildpackage -us -uc -b
-    
+
     # Copy built packages back
     cp ../*.deb "$SCRIPT_DIR/"
-    
+
     echo "Debian package built successfully!"
     echo "Package location: $SCRIPT_DIR/*.deb"
 }
 
 build_rpm() {
     echo "Building RPM package..."
-    
+
     # Setup RPM build tree
     mkdir -p ~/rpmbuild/{BUILD,RPMS,SOURCES,SPECS,SRPMS}
-    
+
     # Create source tarball
     cd "$PROJECT_ROOT/.."
     tar czf ~/rpmbuild/SOURCES/gbn-$VERSION.tar.gz --exclude=.git gbn
-    
+
     # Copy spec file
     cp "$SCRIPT_DIR/rpm/gbn.spec" ~/rpmbuild/SPECS/
-    
+
     # Build RPM
     rpmbuild -ba ~/rpmbuild/SPECS/gbn.spec
-    
+
     # Copy built packages
     cp ~/rpmbuild/RPMS/noarch/*.rpm "$SCRIPT_DIR/"
     cp ~/rpmbuild/SRPMS/*.rpm "$SCRIPT_DIR/"
-    
+
     echo "RPM package built successfully!"
     echo "Package location: $SCRIPT_DIR/*.rpm"
 }

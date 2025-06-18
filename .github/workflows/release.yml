@@ -36,8 +36,12 @@ jobs:
     needs: release
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
+      - name: Checkout tap repository
         uses: actions/checkout@v4
+        with:
+          repository: muneebshahid/homebrew-gbn
+          token: ${{ secrets.HOMEBREW_TAP_TOKEN || secrets.GITHUB_TOKEN }}
+          path: homebrew-gbn
 
       - name: Download release assets
         run: |
@@ -47,18 +51,15 @@ jobs:
 
       - name: Update Homebrew Formula
         run: |
+          cd homebrew-gbn
           sed -i "s/PLACEHOLDER_SHA256/${SHA256}/" Formula/gbn.rb
           sed -i "s|refs/tags/v[0-9.]*|refs/tags/${GITHUB_REF_NAME}|" Formula/gbn.rb
 
-      - name: Create Pull Request
-        uses: peter-evans/create-pull-request@v5
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          commit-message: "Update Homebrew formula for ${GITHUB_REF_NAME}"
-          title: "Update Homebrew formula for ${GITHUB_REF_NAME}"
-          body: |
-            This PR updates the Homebrew formula for the ${GITHUB_REF_NAME} release.
-            
-            SHA256: ${{ env.SHA256 }}
-          branch: update-formula-${GITHUB_REF_NAME}
-          delete-branch: true
+      - name: Commit and Push Formula Update
+        run: |
+          cd homebrew-gbn
+          git config user.name github-actions[bot]
+          git config user.email github-actions[bot]@users.noreply.github.com
+          git add Formula/gbn.rb
+          git commit -m "Update formula for ${GITHUB_REF_NAME}"
+          git push
